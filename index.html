@@ -91,21 +91,25 @@
   </div>
 
   <div id="video-overlay">
-    <!-- Reemplaza "video.mp4" por tu archivo de video -->
-    <video id="player" controls>
-      <source src="video.mp4" type="video/mp4">
+    <!-- El reproductor toma el enlace remoto asignado -->
+    <video id="player" controls playsinline>
+      <source id="video-source" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
       Tu navegador no soporta reproducción de video.
     </video>
   </div>
 
   <script>
+    // Reemplaza esta URL por el enlace directo a tu archivo .mp4
+    const VIDEO_URL = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+
     const history = document.getElementById("history");
     const input = document.getElementById("cli-input");
     const promptLabel = document.getElementById("prompt-label");
     const overlay = document.getElementById("video-overlay");
     const video = document.getElementById("player");
+    const videoSource = document.getElementById("video-source");
 
-    let state = "LOGIN"; // LOGIN -> PASSWORD -> SHELL
+    let state = "LOGIN";
     let currentDir = "~";
 
     function print(text) {
@@ -201,11 +205,18 @@
         case "./video.mp4":
           const targetFile = cmd === "./video.mp4" ? "video.mp4" : args[1];
           if (targetFile === "video.mp4" && (currentDir === "~/truth" || currentDir === "/truth")) {
-            print("[INIT] Descomprimiendo búfer de telemetría...");
-            print("[EXEC] Desplegando archivo de video...");
+            print("[INIT] Estableciendo socket de transmisión remota...");
+            print("[BUFFER] Cargando telemetría audiovisual...");
             setTimeout(() => {
+              if (videoSource.src !== VIDEO_URL) {
+                videoSource.src = VIDEO_URL;
+                video.load();
+              }
               overlay.style.display = "flex";
-              video.play();
+              video.play().catch(() => {
+                // Fallback si el navegador bloquea el autoplay con sonido
+                video.muted = false;
+              });
             }, 700);
           } else if (targetFile === "video.mp4" && currentDir === "~") {
             print("Error: video.mp4 no se encuentra en este directorio. Revisa /truth");
@@ -224,7 +235,6 @@
       }
     }
 
-    // Permitir hacer click en cualquier parte de la pantalla para enfocar el teclado
     document.addEventListener("click", () => input.focus());
   </script>
 </body>
