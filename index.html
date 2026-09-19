@@ -65,11 +65,23 @@
       justify-content: center;
       align-items: center;
     }
-    video {
-      max-width: 95vw;
-      max-height: 95vh;
-      outline: none;
+    iframe {
+      width: 90vw;
+      height: 90vh;
+      border: 1px solid #333333;
       box-shadow: 0 0 30px rgba(0, 50, 100, 0.4);
+    }
+    .close-btn {
+      position: absolute;
+      top: 15px;
+      right: 25px;
+      color: #888;
+      font-size: 14px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .close-btn:hover {
+      color: #fff;
     }
   </style>
 </head>
@@ -91,25 +103,23 @@
   </div>
 
   <div id="video-overlay">
-    <!-- El reproductor toma el enlace remoto asignado -->
-    <video id="player" controls playsinline>
-      <source id="video-source" src="https://drive.google.com/file/d/181LvyYPkFV7tbyduKWTvok-wzg5OB0lr/view?usp=sharing" type="video/mp4">
-      Tu navegador no soporta reproducción de video.
-    </video>
+    <span class="close-btn" onclick="closeVideo()">[CERRAR STREAM (ESC)]</span>
+    <!-- Usamos el modo preview de Drive embebido -->
+    <iframe id="drive-player" src="" allow="autoplay; fullscreen" allowfullscreen></iframe>
   </div>
 
   <script>
-    // Reemplaza esta URL por el enlace directo a tu archivo .mp4
-    const VIDEO_URL = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4";
+    // Enlace formateado en modo preview para incrustación directa
+    const DRIVE_STREAM_URL = "https://drive.google.com/file/d/181LvyYPkFV7tbyduKWTvok-wzg5OB0lr/preview";
+    const REQUIRED_PASS = "fearofablankplanet1926";
 
     const history = document.getElementById("history");
     const input = document.getElementById("cli-input");
     const promptLabel = document.getElementById("prompt-label");
     const overlay = document.getElementById("video-overlay");
-    const video = document.getElementById("player");
-    const videoSource = document.getElementById("video-source");
+    const player = document.getElementById("drive-player");
 
-    let state = "LOGIN";
+    let state = "LOGIN"; // LOGIN -> PASSWORD -> SHELL
     let currentDir = "~";
 
     function print(text) {
@@ -119,6 +129,18 @@
       history.appendChild(line);
       window.scrollTo(0, document.body.scrollHeight);
     }
+
+    function closeVideo() {
+      player.src = "";
+      overlay.style.display = "none";
+      input.focus();
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && overlay.style.display === "flex") {
+        closeVideo();
+      }
+    });
 
     input.addEventListener("keydown", function(e) {
       if (e.key !== "Enter") return;
@@ -137,12 +159,20 @@
           promptLabel.textContent = "ws-049-nav login: ";
         }
       } else if (state === "PASSWORD") {
-        print("Password: ********");
-        state = "SHELL";
-        input.type = "text";
-        print("Last login: Fri Oct 24 02:43:11 on tty1 from 127.0.0.1");
-        print("Terminal initialized. Type 'help' for available diagnostic tools.\n");
-        updatePrompt();
+        if (val === REQUIRED_PASS) {
+          print("Password: [AUTH_CONFIRMED]");
+          state = "SHELL";
+          input.type = "text";
+          print("Last login: Fri Oct 24 02:43:11 on tty1 from 127.0.0.1");
+          print("Terminal initialized. Type 'help' for available diagnostic tools.\n");
+          updatePrompt();
+        } else {
+          print("Password: [REJECTED]");
+          print("Login incorrect. Access denied.");
+          state = "LOGIN";
+          input.type = "text";
+          promptLabel.textContent = "ws-049-nav login: ";
+        }
       } else if (state === "SHELL") {
         print(`${promptLabel.textContent}${val}`);
         handleCommand(val);
@@ -205,19 +235,12 @@
         case "./video.mp4":
           const targetFile = cmd === "./video.mp4" ? "video.mp4" : args[1];
           if (targetFile === "video.mp4" && (currentDir === "~/truth" || currentDir === "/truth")) {
-            print("[INIT] Estableciendo socket de transmisión remota...");
-            print("[BUFFER] Cargando telemetría audiovisual...");
+            print("[INIT] Conectando con el stream remoto de telemetría...");
+            print("[SEC] Desplegando archivo clasificado...");
             setTimeout(() => {
-              if (videoSource.src !== VIDEO_URL) {
-                videoSource.src = VIDEO_URL;
-                video.load();
-              }
+              player.src = DRIVE_STREAM_URL;
               overlay.style.display = "flex";
-              video.play().catch(() => {
-                // Fallback si el navegador bloquea el autoplay con sonido
-                video.muted = false;
-              });
-            }, 700);
+            }, 600);
           } else if (targetFile === "video.mp4" && currentDir === "~") {
             print("Error: video.mp4 no se encuentra en este directorio. Revisa /truth");
           } else {
