@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>G.U.N. TERMINAL // WS-049-NAV</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      background-color: #050505;
+      color: #cccccc;
+      font-family: "Courier New", Courier, monospace;
+      font-size: 15px;
+      line-height: 1.4;
+      padding: 24px;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+    }
+    #terminal-container {
+      width: 100%;
+      max-width: 900px;
+    }
+    .header {
+      margin-bottom: 18px;
+      color: #999999;
+    }
+    .line {
+      white-space: pre-wrap;
+      word-break: break-all;
+      margin-bottom: 3px;
+    }
+    .input-row {
+      display: flex;
+      align-items: center;
+    }
+    .prompt {
+      white-space: nowrap;
+      margin-right: 6px;
+    }
+    input {
+      background: transparent;
+      border: none;
+      color: #ffffff;
+      font-family: inherit;
+      font-size: inherit;
+      outline: none;
+      width: 100%;
+      caret-color: #ffffff;
+    }
+    #video-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #000000;
+      z-index: 999;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      max-width: 95vw;
+      max-height: 95vh;
+      outline: none;
+      box-shadow: 0 0 30px rgba(0, 50, 100, 0.4);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="terminal-container">
+    <div class="header">
+      Debian GNU/Linux 11 (bullseye) ws-049-nav tty1<br>
+      G.U.N. SUB-SURFACE SURVEILLANCE NODE // WS-049-NAV<br>
+      WARNING: UNAUTHORIZED ACCESS IS LOGGED AND PROSECUTED UNDER MARTIAL LAW.
+    </div>
+
+    <div id="history"></div>
+
+    <div class="input-row">
+      <span id="prompt-label" class="prompt">ws-049-nav login: </span>
+      <input type="text" id="cli-input" autofocus autocomplete="off" spellcheck="false">
+    </div>
+  </div>
+
+  <div id="video-overlay">
+    <!-- Reemplaza "video.mp4" por tu archivo de video -->
+    <video id="player" controls>
+      <source src="video.mp4" type="video/mp4">
+      Tu navegador no soporta reproducción de video.
+    </video>
+  </div>
+
+  <script>
+    const history = document.getElementById("history");
+    const input = document.getElementById("cli-input");
+    const promptLabel = document.getElementById("prompt-label");
+    const overlay = document.getElementById("video-overlay");
+    const video = document.getElementById("player");
+
+    let state = "LOGIN"; // LOGIN -> PASSWORD -> SHELL
+    let currentDir = "~";
+
+    function print(text) {
+      const line = document.createElement("div");
+      line.className = "line";
+      line.textContent = text;
+      history.appendChild(line);
+      window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    input.addEventListener("keydown", function(e) {
+      if (e.key !== "Enter") return;
+
+      const val = input.value.trim();
+      input.value = "";
+
+      if (state === "LOGIN") {
+        print(`ws-049-nav login: ${val}`);
+        if (val === "REVEALER") {
+          state = "PASSWORD";
+          promptLabel.textContent = "Password: ";
+          input.type = "password";
+        } else {
+          print("Login incorrect. Restricted to authorized staff (REVEALER).");
+          promptLabel.textContent = "ws-049-nav login: ";
+        }
+      } else if (state === "PASSWORD") {
+        print("Password: ********");
+        state = "SHELL";
+        input.type = "text";
+        print("Last login: Fri Oct 24 02:43:11 on tty1 from 127.0.0.1");
+        print("Terminal initialized. Type 'help' for available diagnostic tools.\n");
+        updatePrompt();
+      } else if (state === "SHELL") {
+        print(`${promptLabel.textContent}${val}`);
+        handleCommand(val);
+      }
+    });
+
+    function updatePrompt() {
+      promptLabel.textContent = `revealer@ws-049-nav:${currentDir}$ `;
+    }
+
+    function handleCommand(rawCmd) {
+      const args = rawCmd.split(" ").filter(Boolean);
+      const cmd = args[0] ? args[0].toLowerCase() : "";
+
+      switch (cmd) {
+        case "":
+          break;
+
+        case "help":
+          print("Comandos disponibles: ls, cd, play, clear, exit");
+          break;
+
+        case "clear":
+          history.innerHTML = "";
+          break;
+
+        case "ls":
+        case "dir":
+          if (currentDir === "~") {
+            print("drwxr-xr-x 2 revealer staff 4096 Oct 24 02:30 truth");
+            print("-rw-r--r-- 1 revealer staff 1024 Oct 24 02:35 notes_ws049.txt");
+          } else if (currentDir === "~/truth" || currentDir === "/truth") {
+            print("-rwxr-xr-x 1 revealer staff 45892011 Oct 24 02:40 video.mp4");
+          }
+          break;
+
+        case "cat":
+          if (args[1] === "notes_ws049.txt" && currentDir === "~") {
+            print("LA VERDAD ESTA EN EL ABISMO. REVISA /truth Y REPRODUCE EL REGISTRO.");
+          } else if (args[1] === "video.mp4") {
+            print("No es posible leer un binario en terminal. Usa 'play video.mp4'.");
+          } else {
+            print(`cat: ${args[1] || ""}: No existe el archivo`);
+          }
+          break;
+
+        case "cd":
+          const target = args[1];
+          if (!target || target === "~" || target === "..") {
+            currentDir = "~";
+          } else if (target === "truth" || target === "/truth" || target === "./truth") {
+            currentDir = "~/truth";
+          } else {
+            print(`bash: cd: ${target}: No existe el directorio`);
+          }
+          updatePrompt();
+          break;
+
+        case "play":
+        case "./video.mp4":
+          const targetFile = cmd === "./video.mp4" ? "video.mp4" : args[1];
+          if (targetFile === "video.mp4" && (currentDir === "~/truth" || currentDir === "/truth")) {
+            print("[INIT] Descomprimiendo búfer de telemetría...");
+            print("[EXEC] Desplegando archivo de video...");
+            setTimeout(() => {
+              overlay.style.display = "flex";
+              video.play();
+            }, 700);
+          } else if (targetFile === "video.mp4" && currentDir === "~") {
+            print("Error: video.mp4 no se encuentra en este directorio. Revisa /truth");
+          } else {
+            print(`play: uso: play video.mp4`);
+          }
+          break;
+
+        case "exit":
+          location.reload();
+          break;
+
+        default:
+          print(`bash: ${cmd}: orden no encontrada`);
+          break;
+      }
+    }
+
+    // Permitir hacer click en cualquier parte de la pantalla para enfocar el teclado
+    document.addEventListener("click", () => input.focus());
+  </script>
+</body>
+</html>
